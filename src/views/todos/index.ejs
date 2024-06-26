@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>To-Do List</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+        body {
+            background: url('/images/ingredientes.avif') no-repeat center center fixed;
+            background-size: cover;
+            color: white;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.301); 
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px; 
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); 
+        }
+        .container h1, .container h2 {
+            color: black; 
+        }
+        .collection-item {
+            background: rgba(255, 255, 255); 
+            color: black;
+            font-size: 1.2rem;
+            border: none;
+            margin-bottom: 10px; 
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1); 
+            padding: 15px; 
+        }
+        .collection-item input[type="text"],
+        .collection-item label,
+        .collection-item .switch label {
+            color: black;
+            font-size: 1.2rem;
+        }
+        .add-task-form {
+            background: rgb(255, 255, 255);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); 
+            margin-bottom: 20px; 
+        }
+        .add-task-form label, .add-task-form input[type="text"] {
+            color: black;
+            font-size: 1.2rem;
+        }
+        .modal-content, .modal-footer {
+            color: black;
+            font-size: 1.2rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="center-align">To-Do List</h1>
+        
+        <form action="/todospanel" method="POST" class="mb-4 hr-remove add-task-form">
+            <div class="input-field">
+                <input type="text" id="title" name="title" class="validate" required>
+                <label for="title">Título:</label>
+            </div>
+            <div class="switch">
+                <label>
+                    <span class="left-align">Incompleto</span>
+                    <input type="checkbox" id="completed" name="completed">
+                    <span class="lever"></span>
+                    <span class="right-align">Completado</span>
+                </label>
+            </div>
+            <br>
+            <button type="submit" class="btn waves-effect waves-light">Agregar Tarea</button>
+        </form>
+        
+        <h2 class="center-align">Tareas</h2>
+        <ul class="collection">
+            <% todos.forEach((todo) => { %>
+                <li class="collection-item" id="todo_<%= todo.id %>">
+                    <form id="updateForm_<%= todo.id %>" class="d-inline">
+                        <div class="input-field">
+                            <input type="text" name="title" value="<%= todo.title %>" class="validate">
+                            <label class="active">Título:</label>
+                        </div>
+                        <div class="switch">
+                            <label>
+                                <span class="left-align">Incompleto</span>
+                                <input type="checkbox" name="completed" <%= todo.completed ? 'checked' : '' %>>
+                                <span class="lever"></span>
+                                <span class="right-align">Completado</span>
+                            </label>
+                        </div>
+                    </form>
+                    <div class="right-align">
+                        <button type="button" onclick="updateTask('<%= todo.id %>')" class="btn-small waves-effect waves-light green tooltipped" data-position="bottom" data-tooltip="Actualizar">
+                            <i class="material-icons">autorenew</i>
+                        </button>
+                        <button type="button" onclick="openDeleteModal('<%= todo.id %>')" class="btn-small waves-effect waves-light red tooltipped" data-position="bottom" data-tooltip="Eliminar">
+                            <i class="material-icons">delete</i>
+                        </button>
+                    </div>
+                </li>
+            <% }) %>
+        </ul>
+    </div>
+
+    <div class="fixed-action-btn">
+        <a href="/index.html" class="btn-floating btn-large waves-effect waves-light #26a69a">
+            <i class="large material-icons">home</i>
+        </a>
+    </div>
+
+    <div id="deleteModal" class="modal">
+        <div class="modal-content">
+            <h4>Eliminar Tarea</h4>
+            <p>¿Estás seguro de eliminar esta tarea?</p>
+        </div>
+        <div class="modal-footer">
+            <button class="modal-close waves-effect waves-green btn-flat" id="confirmDelete">Aceptar</button>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var elems = document.querySelectorAll('.modal');
+            var instances = M.Modal.init(elems);
+            var tooltips = document.querySelectorAll('.tooltipped');
+            var instances = M.Tooltip.init(tooltips);
+        });
+
+        function showToast(message, colorClass) {
+            M.toast({ html: message, classes: colorClass });
+        }
+
+        function updateTask(taskId) {
+            var formData = $('#updateForm_' + taskId).serialize();
+
+            $.ajax({
+                type: 'POST',
+                url: '/todospanel/update/' + taskId,
+                data: formData,
+                success: function(response) {
+                    showToast('Tarea actualizada', 'green');
+                },
+                error: function(err) {
+                    showToast('Error al actualizar la tarea', 'red');
+                    console.error(err);
+                }
+            });
+        }
+
+        var taskIdToDelete;
+
+        function openDeleteModal(taskId) {
+            taskIdToDelete = taskId;
+            var instance = M.Modal.getInstance(document.getElementById('deleteModal'));
+            instance.open();
+        }
+
+        document.getElementById('confirmDelete').addEventListener('click', function() {
+            if (taskIdToDelete) {
+                $.ajax({
+                    type: 'POST',
+                    url: '/todospanel/delete/' + taskIdToDelete,
+                    success: function(response) {
+                        showToast('Tarea eliminada', 'red');
+                        $('#todo_' + taskIdToDelete).remove(); 
+                    },
+                    error: function(err) {
+                        showToast('Error al eliminar la tarea', 'red');
+                        console.error(err);
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>
